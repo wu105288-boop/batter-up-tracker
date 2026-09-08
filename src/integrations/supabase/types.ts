@@ -14,7 +14,181 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      games: {
+        Row: {
+          base1: string | null
+          base2: string | null
+          base3: string | null
+          created_at: string
+          current_pitcher: string | null
+          id: string
+          inning: number
+          is_active: boolean
+          name: string
+          outs: number
+          owner_id: string
+          played_on: string
+        }
+        Insert: {
+          base1?: string | null
+          base2?: string | null
+          base3?: string | null
+          created_at?: string
+          current_pitcher?: string | null
+          id?: string
+          inning?: number
+          is_active?: boolean
+          name?: string
+          outs?: number
+          owner_id?: string
+          played_on?: string
+        }
+        Update: {
+          base1?: string | null
+          base2?: string | null
+          base3?: string | null
+          created_at?: string
+          current_pitcher?: string | null
+          id?: string
+          inning?: number
+          is_active?: boolean
+          name?: string
+          outs?: number
+          owner_id?: string
+          played_on?: string
+        }
+        Relationships: []
+      }
+      plate_appearances: {
+        Row: {
+          balls: number
+          batter_id: string | null
+          game_id: string | null
+          id: string
+          inning: number
+          occurred_at: string
+          outs_made: number
+          owner_id: string
+          pitcher_id: string | null
+          pitches: number
+          rbi: number
+          result: string
+          runs: number
+          strike_pitches: number
+          strikes: number
+        }
+        Insert: {
+          balls?: number
+          batter_id?: string | null
+          game_id?: string | null
+          id?: string
+          inning?: number
+          occurred_at?: string
+          outs_made?: number
+          owner_id?: string
+          pitcher_id?: string | null
+          pitches?: number
+          rbi?: number
+          result: string
+          runs?: number
+          strike_pitches?: number
+          strikes?: number
+        }
+        Update: {
+          balls?: number
+          batter_id?: string | null
+          game_id?: string | null
+          id?: string
+          inning?: number
+          occurred_at?: string
+          outs_made?: number
+          owner_id?: string
+          pitcher_id?: string | null
+          pitches?: number
+          rbi?: number
+          result?: string
+          runs?: number
+          strike_pitches?: number
+          strikes?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plate_appearances_batter_id_fkey"
+            columns: ["batter_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "plate_appearances_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "plate_appearances_pitcher_id_fkey"
+            columns: ["pitcher_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      players: {
+        Row: {
+          bats: string
+          created_at: string
+          id: string
+          is_batter: boolean
+          is_pitcher: boolean
+          name: string
+          number: string | null
+          owner_id: string
+          throws: string
+        }
+        Insert: {
+          bats?: string
+          created_at?: string
+          id?: string
+          is_batter?: boolean
+          is_pitcher?: boolean
+          name: string
+          number?: string | null
+          owner_id?: string
+          throws?: string
+        }
+        Update: {
+          bats?: string
+          created_at?: string
+          id?: string
+          is_batter?: boolean
+          is_pitcher?: boolean
+          name?: string
+          number?: string | null
+          owner_id?: string
+          throws?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          display_name: string | null
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          display_name?: string | null
+          id: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string | null
+          id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
