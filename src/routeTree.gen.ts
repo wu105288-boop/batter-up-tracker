@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AuthenticatedLogRouteImport } from './routes/_authenticated/log'
 import { Route as AuthenticatedPlayersRouteImport } from './routes/_authenticated/players'
 
 const IndexRoute = IndexRouteImport.update({
@@ -28,6 +29,11 @@ const AuthRoute = AuthRouteImport.update({
   path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedLogRoute = AuthenticatedLogRouteImport.update({
+  id: '/log',
+  path: '/log',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedPlayersRoute = AuthenticatedPlayersRouteImport.update({
   id: '/players',
   path: '/players',
@@ -37,11 +43,13 @@ const AuthenticatedPlayersRoute = AuthenticatedPlayersRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/log': typeof AuthenticatedLogRoute
   '/players': typeof AuthenticatedPlayersRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/log': typeof AuthenticatedLogRoute
   '/players': typeof AuthenticatedPlayersRoute
 }
 export interface FileRoutesById {
@@ -49,14 +57,21 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/_authenticated/log': typeof AuthenticatedLogRoute
   '/_authenticated/players': typeof AuthenticatedPlayersRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/players'
+  fullPaths: '/' | '/auth' | '/log' | '/players'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/players'
-  id: '__root__' | '/' | '/_authenticated' | '/auth' | '/_authenticated/players'
+  to: '/' | '/auth' | '/log' | '/players'
+  id:
+    | '__root__'
+    | '/'
+    | '/_authenticated'
+    | '/auth'
+    | '/_authenticated/log'
+    | '/_authenticated/players'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -88,6 +103,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/log': {
+      id: '/_authenticated/log'
+      path: '/log'
+      fullPath: '/log'
+      preLoaderRoute: typeof AuthenticatedLogRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/players': {
       id: '/_authenticated/players'
       path: '/players'
@@ -99,10 +121,12 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedLogRoute: typeof AuthenticatedLogRoute
   AuthenticatedPlayersRoute: typeof AuthenticatedPlayersRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedLogRoute: AuthenticatedLogRoute,
   AuthenticatedPlayersRoute: AuthenticatedPlayersRoute,
 }
 

@@ -33,6 +33,15 @@ export const Route = createFileRoute("/_authenticated/log")({
 type Count = { balls: number; strikes: number; pitches: number; strikePitches: number };
 const EMPTY: Count = { balls: 0, strikes: 0, pitches: 0, strikePitches: 0 };
 
+type GamePatch = Partial<{
+  base1: string | null;
+  base2: string | null;
+  base3: string | null;
+  current_pitcher: string | null;
+  inning: number;
+  outs: number;
+}>;
+
 function LogPage() {
   const qc = useQueryClient();
   const [count, setCount] = useState<Count>(EMPTY);
@@ -105,7 +114,7 @@ function LogPage() {
   const batterName = players.find((p) => p.id === batterId)?.name;
 
   const patchGame = useMutation({
-    mutationFn: async (patch: Record<string, unknown>) => {
+    mutationFn: async (patch: GamePatch) => {
       if (!game) return;
       const { error } = await supabase.from("games").update(patch).eq("id", game.id);
       if (error) throw error;
@@ -119,10 +128,16 @@ function LogPage() {
     qc.invalidateQueries({ queryKey: ["all-pa"] });
   };
 
-  const record = async (code: ResultCode, override?: Partial<Count>) => {
+  const record = async (code: ResultCode, override?: Partial<Count>): Promise<void> => {
     if (!game) return;
-    if (!pitcherId) return toast.error("請先選擇投手");
-    if (!batterId) return toast.error("請先選擇打者");
+    if (!pitcherId) {
+      toast.error("請先選擇投手");
+      return;
+    }
+    if (!batterId) {
+      toast.error("請先選擇打者");
+      return;
+    }
 
     const c = { ...count, ...override };
     const adv = advance(bases, code, batterId);
@@ -144,7 +159,10 @@ function LogPage() {
       runs: adv.runs,
       inning: game.inning ?? 1,
     });
-    if (error) return toast.error("記錄失敗");
+    if (error) {
+      toast.error("記錄失敗");
+      return;
+    }
 
     await supabase
       .from("games")
@@ -198,9 +216,12 @@ function LogPage() {
     });
   };
 
-  const undoLast = async () => {
+  const undoLast = async (): Promise<void> => {
     const last = gamePAs[0];
-    if (!last) return toast.error("這場還沒有紀錄");
+    if (!last) {
+      toast.error("這場還沒有紀錄");
+      return;
+    }
     await supabase.from("plate_appearances").delete().eq("id", last.id);
     refreshAll();
     toast.success("已刪除最後一筆打席（壘包請手動調整）");
@@ -208,7 +229,7 @@ function LogPage() {
 
   const setRunner = (idx: 0 | 1 | 2, playerId: string | null) => {
     const key = (["base1", "base2", "base3"] as const)[idx];
-    patchGame.mutate({ [key]: playerId });
+    patchGame.mutate({ [key]: playerId } as GamePatch);
     setEditBase(null);
   };
 
