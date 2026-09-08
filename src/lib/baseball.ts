@@ -61,6 +61,7 @@ export function advance(
   code: ResultCode,
   batterId: string,
 ): { bases: Bases; runs: number } {
+  const cur: Bases = [bases[0] ?? null, bases[1] ?? null, bases[2] ?? null];
   const next: Bases = [null, null, null];
   let runs = 0;
   const push = (idx: number, id: string | null) => {
@@ -73,7 +74,7 @@ export function advance(
   };
 
   const shift = (n: number) => {
-    for (let i = 2; i >= 0; i--) push(i + n, bases[i]);
+    for (let i = 2; i >= 0; i--) push(i + n, cur[i] ?? null);
   };
 
   switch (code) {
@@ -96,14 +97,13 @@ export function advance(
       break;
     case "walk":
     case "hbp": {
-      // forced advance only
       let carry: string | null = batterId;
       for (let i = 0; i < 3; i++) {
+        const occupant = cur[i] ?? null;
         if (carry === null) {
-          next[i] = bases[i];
+          next[i] = occupant;
           continue;
         }
-        const occupant = bases[i];
         next[i] = carry;
         carry = occupant;
       }
@@ -111,43 +111,33 @@ export function advance(
       break;
     }
     case "sac_fly":
-      next[0] = bases[0];
-      next[1] = bases[1];
-      if (bases[2]) runs += 1;
+      next[0] = cur[0] ?? null;
+      next[1] = cur[1] ?? null;
+      if (cur[2]) runs += 1;
       break;
     case "sac_bunt":
       shift(1);
       break;
     case "fielders_choice":
-      // lead runner erased, batter safe at first
-      if (bases[2]) {
-        next[1] = bases[1];
-        next[0] = bases[0];
-      } else if (bases[1]) {
-        next[2] = null;
-        next[0] = bases[0];
+      if (cur[2]) {
+        next[1] = cur[1] ?? null;
+      } else if (cur[1]) {
+        next[2] = cur[2] ?? null;
       } else {
-        next[1] = bases[1];
-        next[2] = bases[2];
+        next[1] = cur[1] ?? null;
+        next[2] = cur[2] ?? null;
       }
       next[0] = batterId;
       break;
     case "double_play":
-      next[1] = bases[1] && bases[0] ? bases[1] : bases[1];
-      if (bases[0]) {
-        next[0] = null;
-        next[1] = bases[1];
-        next[2] = bases[2];
-      } else {
-        next[0] = null;
-        next[1] = bases[1];
-        next[2] = bases[2];
-      }
+      next[0] = null;
+      next[1] = cur[0] ? null : (cur[1] ?? null);
+      next[2] = cur[0] ? (cur[1] ?? null) : (cur[2] ?? null);
       break;
     default:
-      next[0] = bases[0];
-      next[1] = bases[1];
-      next[2] = bases[2];
+      next[0] = cur[0] ?? null;
+      next[1] = cur[1] ?? null;
+      next[2] = cur[2] ?? null;
   }
   return { bases: next, runs };
 }
