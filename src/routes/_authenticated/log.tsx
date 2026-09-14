@@ -6,17 +6,21 @@ import { supabase } from "@/integrations/supabase/client";
 import { AppShell, Panel, Stat } from "@/components/AppShell";
 import { Diamond } from "@/components/Diamond";
 import {
-  advance,
+  advanceWithResponsibility,
   fmt2,
   fmt3,
+  fmtRate,
   outsMadeFor,
   pitcherStats,
   RESULTS,
   resultShort,
+  STRANDED_RUN_VALUE,
   type Bases,
   type PA,
   type ResultCode,
+  type RunnerBases,
 } from "@/lib/baseball";
+
 
 export const Route = createFileRoute("/_authenticated/log")({
   head: () => ({
@@ -37,10 +41,14 @@ type GamePatch = Partial<{
   base1: string | null;
   base2: string | null;
   base3: string | null;
+  base1_pitcher: string | null;
+  base2_pitcher: string | null;
+  base3_pitcher: string | null;
   current_pitcher: string | null;
   inning: number;
   outs: number;
 }>;
+
 
 function LogPage() {
   const qc = useQueryClient();
@@ -95,16 +103,16 @@ function LogPage() {
     },
   });
 
-  const { data: allPAs = [] } = useQuery({
-    queryKey: ["all-pa"],
+  const { data: charges = [] } = useQuery({
+    queryKey: ["game-charges", game?.id],
+    enabled: !!game?.id,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("plate_appearances")
+        .from("run_charges")
         .select("*")
-        .order("occurred_at", { ascending: false })
-        .limit(2000);
+        .eq("game_id", game!.id);
       if (error) throw error;
-      return data as PA[];
+      return data;
     },
   });
 
@@ -112,6 +120,18 @@ function LogPage() {
   const pitcherId = game?.current_pitcher ?? null;
   const pitcherName = players.find((p) => p.id === pitcherId)?.name;
   const batterName = players.find((p) => p.id === batterId)?.name;
+
+  // Each runner remembers the pitcher who put him on base.
+  const runnerBases: RunnerBases = [
+    game?.base1 ? { playerId: game.base1, pitcherId: game.base1_pitcher ?? null } : null,
+    game?.base2 ? { playerId: game.base2, pitcherId: game.base2_pitcher ?? null } : null,
+    game?.base3 ? { playerId: game.base3, pitcherId: game.base3_pitcher ?? null } : null,
+  ];
+
+  const chargedRuns = charges
+    .filter((c) => c.pitcher_id === pitcherId)
+    .reduce((s, c) => s + Number(c.runs || 0), 0);
+
 
   const patchGame = useMutation({
     mutationFn: async (patch: GamePatch) => {
@@ -126,6 +146,8 @@ function LogPage() {
     qc.invalidateQueries({ queryKey: ["active-game"] });
     qc.invalidateQueries({ queryKey: ["game-pa"] });
     qc.invalidateQueries({ queryKey: ["all-pa"] });
+    qc.invalidateQueries({ queryKey: ["game-charges"] });
+    qc.invalidateQueries({ queryKey: ["all-charges"] });
   };
 
   const record = async (code: ResultCode, override?: Partial<Count>): Promise<void> => {
@@ -140,28 +162,52 @@ function LogPage() {
     }
 
     const c = { ...count, ...override };
-    const adv = advance(bases, code, batterId);
+    const adv = advanceWithResponsibility(runnerBases, code, batterId, pitcherId);
+    const runs = adv.scoredPitchers.length;
     const outsMade = outsMadeFor(code);
     const newOuts = (game.outs ?? 0) + outsMade;
     const endInning = newOuts >= 3;
 
-    const { error } = await supabase.from("plate_appearances").insert({
-      game_id: game.id,
-      pitcher_id: pitcherId,
-      batter_id: batterId,
-      balls: c.balls,
-      strikes: c.strikes,
-      pitches: c.pitches,
-      strike_pitches: c.strikePitches,
-      result: code,
-      rbi: code === "error" ? 0 : adv.runs,
-      outs_made: outsMade,
-      runs: adv.runs,
-      inning: game.inning ?? 1,
-    });
+    const { data: pa, error } = await supabase
+      .from("plate_appearances")
+      .insert({
+        game_id: game.id,
+        pitcher_id: pitcherId,
+        batter_id: batterId,
+        balls: c.balls,
+        strikes: c.strikes,
+        pitches: c.pitches,
+        strike_pitches: c.strikePitches,
+        result: code,
+        rbi: code === "error" ? 0 : runs,
+        outs_made: outsMade,
+        runs,
+        inning: game.inning ?? 1,
+      })
+      .select()
+      .single();
     if (error) {
       toast.error("記錄失敗");
       return;
+    }
+
+    // Each run is charged to the pitcher who put that runner on base.
+    if (runs > 0) {
+      const byPitcher = new Map<string, number>();
+      for (const owner of adv.scoredPitchers) {
+        const key = owner ?? pitcherId;
+        byPitcher.set(key, (byPitcher.get(key) ?? 0) + 1);
+      }
+      await supabase.from("run_charges").insert(
+        [...byPitcher].map(([pid, r]) => ({
+          game_id: game.id,
+          pa_id: pa?.id ?? null,
+          pitcher_id: pid,
+          runs: r,
+          inning: game.inning ?? 1,
+          kind: "run",
+        })),
+      );
     }
 
     await supabase
@@ -169,9 +215,12 @@ function LogPage() {
       .update({
         outs: endInning ? 0 : newOuts,
         inning: endInning ? (game.inning ?? 1) + 1 : (game.inning ?? 1),
-        base1: endInning ? null : adv.bases[0],
-        base2: endInning ? null : adv.bases[1],
-        base3: endInning ? null : adv.bases[2],
+        base1: endInning ? null : (adv.bases[0]?.playerId ?? null),
+        base2: endInning ? null : (adv.bases[1]?.playerId ?? null),
+        base3: endInning ? null : (adv.bases[2]?.playerId ?? null),
+        base1_pitcher: endInning ? null : (adv.bases[0]?.pitcherId ?? null),
+        base2_pitcher: endInning ? null : (adv.bases[1]?.pitcherId ?? null),
+        base3_pitcher: endInning ? null : (adv.bases[2]?.pitcherId ?? null),
       })
       .eq("id", game.id);
 
@@ -179,9 +228,65 @@ function LogPage() {
     setBatterId(null);
     refreshAll();
     toast.success(
-      `${batterName ?? "打者"}：${RESULTS.find((r) => r.code === code)?.label}${adv.runs ? ` · 得 ${adv.runs} 分` : ""}`,
+      `${batterName ?? "打者"}：${RESULTS.find((r) => r.code === code)?.label}${runs ? ` · 得 ${runs} 分` : ""}`,
     );
   };
+
+  /**
+   * Half inning cut short before three outs: every stranded runner is worth
+   * 0.33 of a run, charged to the pitcher who let him on base.
+   */
+  const chargeStranded = async () => {
+    if (!game) return 0;
+    if ((game.outs ?? 0) >= 3) return 0;
+    const rows = runnerBases
+      .filter((r): r is NonNullable<typeof r> => !!r)
+      .map((r) => ({
+        game_id: game.id,
+        pitcher_id: r.pitcherId ?? pitcherId,
+        runs: STRANDED_RUN_VALUE,
+        inning: game.inning ?? 1,
+        kind: "stranded",
+      }))
+      .filter((r) => !!r.pitcher_id);
+    if (rows.length === 0) return 0;
+    await supabase.from("run_charges").insert(rows);
+    return rows.length;
+  };
+
+  const clearBasePatch: GamePatch = {
+    base1: null,
+    base2: null,
+    base3: null,
+    base1_pitcher: null,
+    base2_pitcher: null,
+    base3_pitcher: null,
+  };
+
+  const endHalfInning = async () => {
+    const stranded = await chargeStranded();
+    await supabase
+      .from("games")
+      .update({ ...clearBasePatch, inning: (game?.inning ?? 1) + 1, outs: 0 })
+      .eq("id", game!.id);
+    refreshAll();
+    toast.success(
+      stranded > 0
+        ? `換局 · ${stranded} 位殘壘跑者各折算 ${STRANDED_RUN_VALUE} 分失分`
+        : "換局",
+    );
+  };
+
+  const resetInnings = async () => {
+    if (!game) return;
+    await supabase
+      .from("games")
+      .update({ ...clearBasePatch, inning: 1, outs: 0 })
+      .eq("id", game.id);
+    refreshAll();
+    toast.success("已重設為第 1 局 0 出局（不折算失分）");
+  };
+
 
   const onStrike = () => {
     const next = {
@@ -228,15 +333,20 @@ function LogPage() {
   };
 
   const setRunner = (idx: 0 | 1 | 2, playerId: string | null) => {
-    const key = (["base1", "base2", "base3"] as const)[idx];
-    patchGame.mutate({ [key]: playerId } as GamePatch);
+    const baseKey = (["base1", "base2", "base3"] as const)[idx];
+    const pitcherKey = (["base1_pitcher", "base2_pitcher", "base3_pitcher"] as const)[idx];
+    patchGame.mutate({
+      [baseKey]: playerId,
+      [pitcherKey]: playerId ? pitcherId : null,
+    } as GamePatch);
     setEditBase(null);
   };
 
   const livePitcher = pitcherStats(
     gamePAs.filter((p) => p.pitcher_id === pitcherId),
-    allPAs.filter((p) => p.pitcher_id === pitcherId),
+    chargedRuns,
   );
+
 
   const pitchers = players.filter((p) => p.is_pitcher);
   const batters = players.filter((p) => p.is_batter);
@@ -386,28 +496,27 @@ function LogPage() {
       <Panel
         title="壘包圖"
         action={
-          <div className="flex gap-1 text-[11px]">
+          <div className="flex flex-wrap gap-1 text-[11px]">
             <button
-              onClick={() => patchGame.mutate({ base1: null, base2: null, base3: null })}
+              onClick={() => patchGame.mutate(clearBasePatch)}
               className="rounded-md bg-base/60 px-2 py-1 text-mute ring-1 ring-white/10"
             >
               清空壘包
             </button>
             <button
-              onClick={() =>
-                patchGame.mutate({
-                  inning: (game?.inning ?? 1) + 1,
-                  outs: 0,
-                  base1: null,
-                  base2: null,
-                  base3: null,
-                })
-              }
+              onClick={() => void endHalfInning()}
               className="rounded-md bg-base/60 px-2 py-1 text-mute ring-1 ring-white/10"
             >
               換局
             </button>
+            <button
+              onClick={() => void resetInnings()}
+              className="rounded-md bg-base/60 px-2 py-1 text-mute ring-1 ring-white/10"
+            >
+              重設局數
+            </button>
           </div>
+
         }
       >
         <Diamond
@@ -449,16 +558,17 @@ function LogPage() {
         }
       >
         <div className="grid grid-cols-3 gap-2">
-          <Stat label="防禦率 ERA" value={fmt2(livePitcher.era)} tone="sky" />
+          <Stat label="防禦率 ERA" value={livePitcher.eraDisplay} tone="sky" />
           <Stat label="被打擊率 BAA" value={fmt3(livePitcher.baa)} />
-          <Stat
-            label={`投球局數 IP${livePitcher.ipEstimated ? "（推估）" : ""}`}
-            value={livePitcher.ipDisplay}
-          />
+          <Stat label="投球局數 IP" value={livePitcher.ipDisplay} />
+          <Stat label="責任失分" value={fmt2(livePitcher.runs)} />
+          <Stat label="K/9" value={fmtRate(livePitcher.k9)} tone="ball" />
+          <Stat label="BB/9" value={fmtRate(livePitcher.bb9)} />
           <Stat label="面對打席 BF" value={String(livePitcher.bf)} />
           <Stat label="總投球數 NP" value={String(livePitcher.np)} tone="amber" />
           <Stat label="好球率" value={`${Math.round(livePitcher.strikePct * 100)}%`} />
         </div>
+
       </Panel>
 
       <Panel title="本場打席紀錄">

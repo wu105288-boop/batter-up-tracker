@@ -17,8 +17,11 @@ export type Database = {
       games: {
         Row: {
           base1: string | null
+          base1_pitcher: string | null
           base2: string | null
+          base2_pitcher: string | null
           base3: string | null
+          base3_pitcher: string | null
           created_at: string
           current_pitcher: string | null
           id: string
@@ -31,8 +34,11 @@ export type Database = {
         }
         Insert: {
           base1?: string | null
+          base1_pitcher?: string | null
           base2?: string | null
+          base2_pitcher?: string | null
           base3?: string | null
+          base3_pitcher?: string | null
           created_at?: string
           current_pitcher?: string | null
           id?: string
@@ -45,8 +51,11 @@ export type Database = {
         }
         Update: {
           base1?: string | null
+          base1_pitcher?: string | null
           base2?: string | null
+          base2_pitcher?: string | null
           base3?: string | null
+          base3_pitcher?: string | null
           created_at?: string
           current_pitcher?: string | null
           id?: string
@@ -57,7 +66,29 @@ export type Database = {
           owner_id?: string
           played_on?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "games_base1_pitcher_fkey"
+            columns: ["base1_pitcher"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "games_base2_pitcher_fkey"
+            columns: ["base2_pitcher"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "games_base3_pitcher_fkey"
+            columns: ["base3_pitcher"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       plate_appearances: {
         Row: {
@@ -188,6 +219,64 @@ export type Database = {
           id?: string
         }
         Relationships: []
+      }
+      run_charges: {
+        Row: {
+          created_at: string
+          game_id: string | null
+          id: string
+          inning: number
+          kind: string
+          owner_id: string
+          pa_id: string | null
+          pitcher_id: string | null
+          runs: number
+        }
+        Insert: {
+          created_at?: string
+          game_id?: string | null
+          id?: string
+          inning?: number
+          kind?: string
+          owner_id?: string
+          pa_id?: string | null
+          pitcher_id?: string | null
+          runs?: number
+        }
+        Update: {
+          created_at?: string
+          game_id?: string | null
+          id?: string
+          inning?: number
+          kind?: string
+          owner_id?: string
+          pa_id?: string | null
+          pitcher_id?: string | null
+          runs?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "run_charges_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "run_charges_pa_id_fkey"
+            columns: ["pa_id"]
+            isOneToOne: false
+            referencedRelation: "plate_appearances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "run_charges_pitcher_id_fkey"
+            columns: ["pitcher_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
