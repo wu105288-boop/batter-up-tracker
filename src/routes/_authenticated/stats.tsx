@@ -12,7 +12,16 @@ import {
 } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
 import { AppShell, Panel, Stat } from "@/components/AppShell";
-import { batterStats, fmt2, fmt3, pitcherStats, type PA } from "@/lib/baseball";
+import {
+  batterStats,
+  fmt2,
+  fmt3,
+  fmtRate,
+  pitcherStats,
+  STRANDED_RUN_VALUE,
+  type PA,
+} from "@/lib/baseball";
+
 
 export const Route = createFileRoute("/_authenticated/stats")({
   head: () => ({
