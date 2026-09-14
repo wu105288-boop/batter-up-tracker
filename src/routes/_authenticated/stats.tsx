@@ -233,29 +233,26 @@ function StatsPage() {
       {mode === "pitcher" ? (
         <Panel title="投手資料">
           <div className="grid grid-cols-3 gap-2">
-            <Stat label="防禦率 ERA" value={fmt2(pStats.era)} tone="sky" />
+            <Stat label="防禦率 ERA" value={pStats.eraDisplay} tone="sky" />
             <Stat label="被打擊率 BAA" value={fmt3(pStats.baa)} />
-            <Stat
-              label={`投球局數 IP${pStats.ipEstimated ? "（推估）" : ""}`}
-              value={pStats.ipDisplay}
-            />
+            <Stat label="投球局數 IP" value={pStats.ipDisplay} />
+            <Stat label="責任失分 R" value={fmt2(pStats.runs)} />
+            <Stat label="K/9" value={fmtRate(pStats.k9)} tone="ball" />
+            <Stat label="BB/9" value={fmtRate(pStats.bb9)} />
             <Stat label="面對打席 BF" value={String(pStats.bf)} />
             <Stat label="總投球數 NP" value={String(pStats.np)} tone="amber" />
             <Stat label="好球比例" value={`${Math.round(pStats.strikePct * 100)}%`} />
-            <Stat label="三振 K" value={String(pStats.so)} tone="ball" />
-            <Stat label="保送 BB" value={String(pStats.bb)} />
             <Stat label="三振保送比" value={fmt2(pStats.kbb)} />
             <Stat label="被安打 H" value={String(pStats.h)} />
-            <Stat label="失分 R" value={String(pStats.runs)} />
             <Stat label="WHIP" value={fmt2(pStats.whip)} />
           </div>
-          {pStats.ipEstimated && (
-            <p className="mt-2 text-[11px] text-mute">
-              未投滿一局，局數以歷史每打席製造出局率推估後計算防禦率。
-            </p>
-          )}
+          <p className="mt-2 text-[11px] text-mute">
+            局數以出局數計（1 出局 = 0.1 局）；跑者得分算在讓他上壘的投手身上，提前換局時每位殘壘跑者折算{" "}
+            {STRANDED_RUN_VALUE} 分。沒有出局數卻有失分時防禦率為 ∞。
+          </p>
         </Panel>
       ) : (
+
         <Panel title="打者資料">
           <div className="grid grid-cols-3 gap-2">
             <Stat label="打擊率 AVG" value={fmt3(bStats.avg)} tone="amber" />
