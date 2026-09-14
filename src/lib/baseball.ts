@@ -55,22 +55,27 @@ export function outsMadeFor(code: ResultCode) {
   return 0;
 }
 
-/** Advance runners. Returns new bases plus how many runners scored. */
-export function advance(
-  bases: Bases,
+export type Runner = { playerId: string; pitcherId: string | null };
+export type RunnerBases = [Runner | null, Runner | null, Runner | null];
+
+type Slots<T> = [T | null, T | null, T | null];
+
+/** Core runner movement. Returns new bases plus the runners that scored. */
+function advanceCore<T>(
+  bases: Slots<T>,
   code: ResultCode,
-  batterId: string,
-): { bases: Bases; runs: number } {
-  const cur: Bases = [bases[0] ?? null, bases[1] ?? null, bases[2] ?? null];
-  const next: Bases = [null, null, null];
-  let runs = 0;
-  const push = (idx: number, id: string | null) => {
-    if (!id) return;
+  batter: T,
+): { bases: Slots<T>; scored: T[] } {
+  const cur: Slots<T> = [bases[0] ?? null, bases[1] ?? null, bases[2] ?? null];
+  const next: Slots<T> = [null, null, null];
+  const scored: T[] = [];
+  const push = (idx: number, r: T | null) => {
+    if (!r) return;
     if (idx > 2) {
-      runs += 1;
+      scored.push(r);
       return;
     }
-    next[idx] = id;
+    next[idx] = r;
   };
 
   const shift = (n: number) => {
@@ -81,23 +86,23 @@ export function advance(
     case "single":
     case "error":
       shift(1);
-      push(0, batterId);
+      push(0, batter);
       break;
     case "double":
       shift(2);
-      push(1, batterId);
+      push(1, batter);
       break;
     case "triple":
       shift(3);
-      push(2, batterId);
+      push(2, batter);
       break;
     case "homerun":
       shift(4);
-      runs += 1;
+      scored.push(batter);
       break;
     case "walk":
     case "hbp": {
-      let carry: string | null = batterId;
+      let carry: T | null = batter;
       for (let i = 0; i < 3; i++) {
         const occupant = cur[i] ?? null;
         if (carry === null) {
@@ -107,13 +112,13 @@ export function advance(
         next[i] = carry;
         carry = occupant;
       }
-      if (carry) runs += 1;
+      if (carry) scored.push(carry);
       break;
     }
     case "sac_fly":
       next[0] = cur[0] ?? null;
       next[1] = cur[1] ?? null;
-      if (cur[2]) runs += 1;
+      if (cur[2]) scored.push(cur[2]);
       break;
     case "sac_bunt":
       shift(1);
@@ -127,7 +132,7 @@ export function advance(
         next[1] = cur[1] ?? null;
         next[2] = cur[2] ?? null;
       }
-      next[0] = batterId;
+      next[0] = batter;
       break;
     case "double_play":
       next[0] = null;
@@ -139,8 +144,40 @@ export function advance(
       next[1] = cur[1] ?? null;
       next[2] = cur[2] ?? null;
   }
-  return { bases: next, runs };
+  return { bases: next, scored };
 }
+
+/** Advance runners. Returns new bases plus how many runners scored. */
+export function advance(
+  bases: Bases,
+  code: ResultCode,
+  batterId: string,
+): { bases: Bases; runs: number } {
+  const r = advanceCore<string>(bases, code, batterId);
+  return { bases: r.bases as Bases, runs: r.scored.length };
+}
+
+/**
+ * Advance runners while keeping the pitcher responsible for each runner.
+ * `scoredPitchers` lists the responsible pitcher of every runner that scored,
+ * so runs are charged to whoever put the runner on base.
+ */
+export function advanceWithResponsibility(
+  bases: RunnerBases,
+  code: ResultCode,
+  batterId: string,
+  pitcherId: string | null,
+): { bases: RunnerBases; scoredPitchers: (string | null)[] } {
+  const r = advanceCore<Runner>(bases, code, { playerId: batterId, pitcherId });
+  return {
+    bases: r.bases as RunnerBases,
+    scoredPitchers: r.scored.map((x) => x.pitcherId),
+  };
+}
+
+/** A runner stranded when a half inning is cut short counts as this many runs. */
+export const STRANDED_RUN_VALUE = 0.33;
+
 
 export type PA = {
   id: string;
