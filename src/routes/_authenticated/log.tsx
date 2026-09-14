@@ -146,6 +146,8 @@ function LogPage() {
     qc.invalidateQueries({ queryKey: ["active-game"] });
     qc.invalidateQueries({ queryKey: ["game-pa"] });
     qc.invalidateQueries({ queryKey: ["all-pa"] });
+    qc.invalidateQueries({ queryKey: ["game-charges"] });
+    qc.invalidateQueries({ queryKey: ["all-charges"] });
   };
 
   const record = async (code: ResultCode, override?: Partial<Count>): Promise<void> => {
@@ -160,28 +162,52 @@ function LogPage() {
     }
 
     const c = { ...count, ...override };
-    const adv = advance(bases, code, batterId);
+    const adv = advanceWithResponsibility(runnerBases, code, batterId, pitcherId);
+    const runs = adv.scoredPitchers.length;
     const outsMade = outsMadeFor(code);
     const newOuts = (game.outs ?? 0) + outsMade;
     const endInning = newOuts >= 3;
 
-    const { error } = await supabase.from("plate_appearances").insert({
-      game_id: game.id,
-      pitcher_id: pitcherId,
-      batter_id: batterId,
-      balls: c.balls,
-      strikes: c.strikes,
-      pitches: c.pitches,
-      strike_pitches: c.strikePitches,
-      result: code,
-      rbi: code === "error" ? 0 : adv.runs,
-      outs_made: outsMade,
-      runs: adv.runs,
-      inning: game.inning ?? 1,
-    });
+    const { data: pa, error } = await supabase
+      .from("plate_appearances")
+      .insert({
+        game_id: game.id,
+        pitcher_id: pitcherId,
+        batter_id: batterId,
+        balls: c.balls,
+        strikes: c.strikes,
+        pitches: c.pitches,
+        strike_pitches: c.strikePitches,
+        result: code,
+        rbi: code === "error" ? 0 : runs,
+        outs_made: outsMade,
+        runs,
+        inning: game.inning ?? 1,
+      })
+      .select()
+      .single();
     if (error) {
       toast.error("記錄失敗");
       return;
+    }
+
+    // Each run is charged to the pitcher who put that runner on base.
+    if (runs > 0) {
+      const byPitcher = new Map<string, number>();
+      for (const owner of adv.scoredPitchers) {
+        const key = owner ?? pitcherId;
+        byPitcher.set(key, (byPitcher.get(key) ?? 0) + 1);
+      }
+      await supabase.from("run_charges").insert(
+        [...byPitcher].map(([pid, r]) => ({
+          game_id: game.id,
+          pa_id: pa?.id ?? null,
+          pitcher_id: pid,
+          runs: r,
+          inning: game.inning ?? 1,
+          kind: "run",
+        })),
+      );
     }
 
     await supabase
@@ -189,9 +215,12 @@ function LogPage() {
       .update({
         outs: endInning ? 0 : newOuts,
         inning: endInning ? (game.inning ?? 1) + 1 : (game.inning ?? 1),
-        base1: endInning ? null : adv.bases[0],
-        base2: endInning ? null : adv.bases[1],
-        base3: endInning ? null : adv.bases[2],
+        base1: endInning ? null : (adv.bases[0]?.playerId ?? null),
+        base2: endInning ? null : (adv.bases[1]?.playerId ?? null),
+        base3: endInning ? null : (adv.bases[2]?.playerId ?? null),
+        base1_pitcher: endInning ? null : (adv.bases[0]?.pitcherId ?? null),
+        base2_pitcher: endInning ? null : (adv.bases[1]?.pitcherId ?? null),
+        base3_pitcher: endInning ? null : (adv.bases[2]?.pitcherId ?? null),
       })
       .eq("id", game.id);
 
@@ -199,9 +228,65 @@ function LogPage() {
     setBatterId(null);
     refreshAll();
     toast.success(
-      `${batterName ?? "打者"}：${RESULTS.find((r) => r.code === code)?.label}${adv.runs ? ` · 得 ${adv.runs} 分` : ""}`,
+      `${batterName ?? "打者"}：${RESULTS.find((r) => r.code === code)?.label}${runs ? ` · 得 ${runs} 分` : ""}`,
     );
   };
+
+  /**
+   * Half inning cut short before three outs: every stranded runner is worth
+   * 0.33 of a run, charged to the pitcher who let him on base.
+   */
+  const chargeStranded = async () => {
+    if (!game) return 0;
+    if ((game.outs ?? 0) >= 3) return 0;
+    const rows = runnerBases
+      .filter((r): r is NonNullable<typeof r> => !!r)
+      .map((r) => ({
+        game_id: game.id,
+        pitcher_id: r.pitcherId ?? pitcherId,
+        runs: STRANDED_RUN_VALUE,
+        inning: game.inning ?? 1,
+        kind: "stranded",
+      }))
+      .filter((r) => !!r.pitcher_id);
+    if (rows.length === 0) return 0;
+    await supabase.from("run_charges").insert(rows);
+    return rows.length;
+  };
+
+  const clearBasePatch: GamePatch = {
+    base1: null,
+    base2: null,
+    base3: null,
+    base1_pitcher: null,
+    base2_pitcher: null,
+    base3_pitcher: null,
+  };
+
+  const endHalfInning = async () => {
+    const stranded = await chargeStranded();
+    await supabase
+      .from("games")
+      .update({ ...clearBasePatch, inning: (game?.inning ?? 1) + 1, outs: 0 })
+      .eq("id", game!.id);
+    refreshAll();
+    toast.success(
+      stranded > 0
+        ? `換局 · ${stranded} 位殘壘跑者各折算 ${STRANDED_RUN_VALUE} 分失分`
+        : "換局",
+    );
+  };
+
+  const resetInnings = async () => {
+    if (!game) return;
+    await supabase
+      .from("games")
+      .update({ ...clearBasePatch, inning: 1, outs: 0 })
+      .eq("id", game.id);
+    refreshAll();
+    toast.success("已重設為第 1 局 0 出局（不折算失分）");
+  };
+
 
   const onStrike = () => {
     const next = {
