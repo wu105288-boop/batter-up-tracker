@@ -41,10 +41,14 @@ type GamePatch = Partial<{
   base1: string | null;
   base2: string | null;
   base3: string | null;
+  base1_pitcher: string | null;
+  base2_pitcher: string | null;
+  base3_pitcher: string | null;
   current_pitcher: string | null;
   inning: number;
   outs: number;
 }>;
+
 
 function LogPage() {
   const qc = useQueryClient();
