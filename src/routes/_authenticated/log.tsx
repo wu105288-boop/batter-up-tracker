@@ -103,18 +103,19 @@ function LogPage() {
     },
   });
 
-  const { data: allPAs = [] } = useQuery({
-    queryKey: ["all-pa"],
+  const { data: charges = [] } = useQuery({
+    queryKey: ["game-charges", game?.id],
+    enabled: !!game?.id,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("plate_appearances")
+        .from("run_charges")
         .select("*")
-        .order("occurred_at", { ascending: false })
-        .limit(2000);
+        .eq("game_id", game!.id);
       if (error) throw error;
-      return data as PA[];
+      return data;
     },
   });
+
 
   const bases: Bases = [game?.base1 ?? null, game?.base2 ?? null, game?.base3 ?? null];
   const pitcherId = game?.current_pitcher ?? null;
