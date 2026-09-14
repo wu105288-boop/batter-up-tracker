@@ -6,17 +6,21 @@ import { supabase } from "@/integrations/supabase/client";
 import { AppShell, Panel, Stat } from "@/components/AppShell";
 import { Diamond } from "@/components/Diamond";
 import {
-  advance,
+  advanceWithResponsibility,
   fmt2,
   fmt3,
+  fmtRate,
   outsMadeFor,
   pitcherStats,
   RESULTS,
   resultShort,
+  STRANDED_RUN_VALUE,
   type Bases,
   type PA,
   type ResultCode,
+  type RunnerBases,
 } from "@/lib/baseball";
+
 
 export const Route = createFileRoute("/_authenticated/log")({
   head: () => ({
