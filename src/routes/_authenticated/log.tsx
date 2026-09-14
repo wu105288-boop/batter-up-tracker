@@ -496,28 +496,27 @@ function LogPage() {
       <Panel
         title="壘包圖"
         action={
-          <div className="flex gap-1 text-[11px]">
+          <div className="flex flex-wrap gap-1 text-[11px]">
             <button
-              onClick={() => patchGame.mutate({ base1: null, base2: null, base3: null })}
+              onClick={() => patchGame.mutate(clearBasePatch)}
               className="rounded-md bg-base/60 px-2 py-1 text-mute ring-1 ring-white/10"
             >
               清空壘包
             </button>
             <button
-              onClick={() =>
-                patchGame.mutate({
-                  inning: (game?.inning ?? 1) + 1,
-                  outs: 0,
-                  base1: null,
-                  base2: null,
-                  base3: null,
-                })
-              }
+              onClick={() => void endHalfInning()}
               className="rounded-md bg-base/60 px-2 py-1 text-mute ring-1 ring-white/10"
             >
               換局
             </button>
+            <button
+              onClick={() => void resetInnings()}
+              className="rounded-md bg-base/60 px-2 py-1 text-mute ring-1 ring-white/10"
+            >
+              重設局數
+            </button>
           </div>
+
         }
       >
         <Diamond
