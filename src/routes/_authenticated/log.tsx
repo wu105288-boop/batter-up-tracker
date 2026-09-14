@@ -116,11 +116,22 @@ function LogPage() {
     },
   });
 
-
   const bases: Bases = [game?.base1 ?? null, game?.base2 ?? null, game?.base3 ?? null];
   const pitcherId = game?.current_pitcher ?? null;
   const pitcherName = players.find((p) => p.id === pitcherId)?.name;
   const batterName = players.find((p) => p.id === batterId)?.name;
+
+  // Each runner remembers the pitcher who put him on base.
+  const runnerBases: RunnerBases = [
+    game?.base1 ? { playerId: game.base1, pitcherId: game.base1_pitcher ?? null } : null,
+    game?.base2 ? { playerId: game.base2, pitcherId: game.base2_pitcher ?? null } : null,
+    game?.base3 ? { playerId: game.base3, pitcherId: game.base3_pitcher ?? null } : null,
+  ];
+
+  const chargedRuns = charges
+    .filter((c) => c.pitcher_id === pitcherId)
+    .reduce((s, c) => s + Number(c.runs || 0), 0);
+
 
   const patchGame = useMutation({
     mutationFn: async (patch: GamePatch) => {
