@@ -245,44 +245,45 @@ export type PitcherStats = {
   outs: number;
   ipDisplay: string;
   ipValue: number;
-  ipEstimated: boolean;
   h: number;
   hr: number;
   bb: number;
   so: number;
   runs: number;
   era: number;
+  eraDisplay: string;
   baa: number;
+  k9: number;
+  bb9: number;
   kbb: number;
   whip: number;
 };
 
+/** 1 out = .1, 2 outs = .2 */
 export function formatIP(outs: number) {
   return `${Math.floor(outs / 3)}.${outs % 3}`;
 }
 
-/**
- * Innings pitched. When the pitcher never completed a full inning we estimate
- * innings from batters faced, using their own historical outs-per-batter rate,
- * falling back to the whole dataset, then to a plain 0.28 (roughly a .720 OBP-against
- * free simple estimate).
- */
-export function inningsPitched(rows: PA[], historical: PA[]) {
-  const outs = rows.reduce((s, r) => s + (r.outs_made || 0), 0);
-  if (outs >= 3 || rows.length === 0) {
-    return { ip: outs / 3, outs, estimated: false };
-  }
-  const rate = (set: PA[]) => {
-    const bf = set.length;
-    const o = set.reduce((s, r) => s + (r.outs_made || 0), 0);
-    return bf >= 10 && o > 0 ? o / bf : null;
-  };
-  const r = rate(historical) ?? rate(rows) ?? 0.28;
-  const estOuts = Math.max(outs, rows.length * r);
-  return { ip: estOuts / 3, outs, estimated: estOuts > outs };
+/** Per-9-innings rate. "∞" while no out has been recorded but something happened. */
+export function per9(count: number, ip: number) {
+  if (ip > 0) return (count * 9) / ip;
+  return count > 0 ? Infinity : 0;
 }
 
-export function pitcherStats(rows: PA[], historical: PA[] = rows): PitcherStats {
+export function fmtRate(n: number) {
+  if (n === Infinity) return "∞";
+  if (!isFinite(n)) return "-";
+  return n.toFixed(2);
+}
+
+/**
+ * Pitcher stats. Innings pitched come strictly from recorded outs (no estimate),
+ * so a pitcher with runs charged but zero outs has an infinite ERA.
+ * `chargedRuns` are the runs this pitcher is responsible for (inherited runners
+ * are charged to whoever put them on base), defaulting to the runs on his own
+ * plate appearances.
+ */
+export function pitcherStats(rows: PA[], chargedRuns?: number): PitcherStats {
   const c = (code: string) => rows.filter((r) => r.result === code).length;
   const h = c("single") + c("double") + c("triple") + c("homerun");
   const bb = c("walk");
@@ -293,28 +294,33 @@ export function pitcherStats(rows: PA[], historical: PA[] = rows): PitcherStats 
   const bf = rows.length;
   const np = rows.reduce((s, r) => s + (r.pitches || 0), 0);
   const sp = rows.reduce((s, r) => s + (r.strike_pitches || 0), 0);
-  const runs = rows.reduce((s, r) => s + (r.runs || 0), 0);
-  const { ip, outs, estimated } = inningsPitched(rows, historical);
+  const runs = chargedRuns ?? rows.reduce((s, r) => s + (r.runs || 0), 0);
+  const outs = rows.reduce((s, r) => s + (r.outs_made || 0), 0);
+  const ip = outs / 3;
   const abAgainst = bf - bb - hbp - sf - sac;
+  const era = per9(runs, ip);
   return {
     bf,
     np,
     strikePct: np > 0 ? sp / np : 0,
     outs,
-    ipDisplay: estimated ? ip.toFixed(2) : formatIP(outs),
+    ipDisplay: formatIP(outs),
     ipValue: ip,
-    ipEstimated: estimated,
     h,
     hr: c("homerun"),
     bb,
     so,
     runs,
-    era: ip > 0 ? (runs * 9) / ip : 0,
+    era,
+    eraDisplay: fmtRate(era),
     baa: abAgainst > 0 ? h / abAgainst : 0,
+    k9: per9(so, ip),
+    bb9: per9(bb, ip),
     kbb: bb > 0 ? so / bb : so,
-    whip: ip > 0 ? (h + bb) / ip : 0,
+    whip: ip > 0 ? (h + bb) / ip : Infinity * Number(h + bb > 0) || 0,
   };
 }
+
 
 export function fmt3(n: number) {
   if (!isFinite(n)) return "-";
