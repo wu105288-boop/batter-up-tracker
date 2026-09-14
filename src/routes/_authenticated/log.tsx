@@ -333,15 +333,20 @@ function LogPage() {
   };
 
   const setRunner = (idx: 0 | 1 | 2, playerId: string | null) => {
-    const key = (["base1", "base2", "base3"] as const)[idx];
-    patchGame.mutate({ [key]: playerId } as GamePatch);
+    const baseKey = (["base1", "base2", "base3"] as const)[idx];
+    const pitcherKey = (["base1_pitcher", "base2_pitcher", "base3_pitcher"] as const)[idx];
+    patchGame.mutate({
+      [baseKey]: playerId,
+      [pitcherKey]: playerId ? pitcherId : null,
+    } as GamePatch);
     setEditBase(null);
   };
 
   const livePitcher = pitcherStats(
     gamePAs.filter((p) => p.pitcher_id === pitcherId),
-    allPAs.filter((p) => p.pitcher_id === pitcherId),
+    chargedRuns,
   );
+
 
   const pitchers = players.filter((p) => p.is_pitcher);
   const batters = players.filter((p) => p.is_batter);
