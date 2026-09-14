@@ -558,16 +558,17 @@ function LogPage() {
         }
       >
         <div className="grid grid-cols-3 gap-2">
-          <Stat label="防禦率 ERA" value={fmt2(livePitcher.era)} tone="sky" />
+          <Stat label="防禦率 ERA" value={livePitcher.eraDisplay} tone="sky" />
           <Stat label="被打擊率 BAA" value={fmt3(livePitcher.baa)} />
-          <Stat
-            label={`投球局數 IP${livePitcher.ipEstimated ? "（推估）" : ""}`}
-            value={livePitcher.ipDisplay}
-          />
+          <Stat label="投球局數 IP" value={livePitcher.ipDisplay} />
+          <Stat label="責任失分" value={fmt2(livePitcher.runs)} />
+          <Stat label="K/9" value={fmtRate(livePitcher.k9)} tone="ball" />
+          <Stat label="BB/9" value={fmtRate(livePitcher.bb9)} />
           <Stat label="面對打席 BF" value={String(livePitcher.bf)} />
           <Stat label="總投球數 NP" value={String(livePitcher.np)} tone="amber" />
           <Stat label="好球率" value={`${Math.round(livePitcher.strikePct * 100)}%`} />
         </div>
+
       </Panel>
 
       <Panel title="本場打席紀錄">
