@@ -317,7 +317,7 @@ export function pitcherStats(rows: PA[], chargedRuns?: number): PitcherStats {
     k9: per9(so, ip),
     bb9: per9(bb, ip),
     kbb: bb > 0 ? so / bb : so,
-    whip: ip > 0 ? (h + bb) / ip : Infinity * Number(h + bb > 0) || 0,
+    whip: ip > 0 ? (h + bb) / ip : h + bb > 0 ? Infinity : 0,
   };
 }
 
