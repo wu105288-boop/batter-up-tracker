@@ -75,6 +75,20 @@ function StatsPage() {
     },
   });
 
+  const { data: allCharges = [] } = useQuery({
+    queryKey: ["all-charges"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("run_charges")
+        .select("*")
+        .order("created_at", { ascending: true })
+        .limit(5000);
+      if (error) throw error;
+      return data;
+    },
+  });
+
+
   const activeId = playerId ?? players[0]?.id ?? null;
 
   const { start, end } = useMemo(() => {
