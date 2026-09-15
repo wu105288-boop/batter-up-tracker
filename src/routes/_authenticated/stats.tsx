@@ -100,7 +100,19 @@ function StatsPage() {
     [playerAll, start, end],
   );
 
-  const pStats = pitcherStats(rows, playerAll);
+  const playerCharges = useMemo(
+    () =>
+      allCharges.filter((c) => {
+        if (c.pitcher_id !== activeId) return false;
+        const t = new Date(c.created_at).getTime();
+        return t >= start.getTime() && t <= end.getTime();
+      }),
+    [allCharges, activeId, start, end],
+  );
+
+  const chargedRuns = playerCharges.reduce((s, c) => s + Number(c.runs || 0), 0);
+
+  const pStats = pitcherStats(rows, chargedRuns);
   const bStats = batterStats(rows);
 
   const metrics =
@@ -108,7 +120,8 @@ function StatsPage() {
       ? [
           { key: "era", label: "ERA 防禦率" },
           { key: "baa", label: "BAA 被打擊率" },
-          { key: "kbb", label: "三振保送比" },
+          { key: "k9", label: "K/9" },
+          { key: "bb9", label: "BB/9" },
           { key: "strike", label: "好球比例" },
           { key: "whip", label: "WHIP" },
         ]
@@ -133,29 +146,38 @@ function StatsPage() {
     return days.map((day) => {
       acc.push(...(byDay.get(day) ?? []));
       const snapshot = [...acc];
-      const ps = pitcherStats(snapshot, playerAll);
+      const runsToDate = playerCharges
+        .filter((c) => c.created_at.slice(0, 10) <= day)
+        .reduce((s, c) => s + Number(c.runs || 0), 0);
+      const ps = pitcherStats(snapshot, runsToDate);
       const bs = batterStats(snapshot);
       const value =
         activeMetric === "era"
           ? ps.era
           : activeMetric === "baa"
             ? ps.baa
-            : activeMetric === "kbb"
-              ? ps.kbb
-              : activeMetric === "strike"
-                ? ps.strikePct
-                : activeMetric === "whip"
-                  ? ps.whip
-                  : activeMetric === "avg"
-                    ? bs.avg
-                    : activeMetric === "obp"
-                      ? bs.obp
-                      : activeMetric === "slg"
-                        ? bs.slg
-                        : bs.ops;
-      return { day: day.slice(5), value: Number(value.toFixed(3)) };
+            : activeMetric === "k9"
+              ? ps.k9
+              : activeMetric === "bb9"
+                ? ps.bb9
+                : activeMetric === "strike"
+                  ? ps.strikePct
+                  : activeMetric === "whip"
+                    ? ps.whip
+                    : activeMetric === "avg"
+                      ? bs.avg
+                      : activeMetric === "obp"
+                        ? bs.obp
+                        : activeMetric === "slg"
+                          ? bs.slg
+                          : bs.ops;
+      return {
+        day: day.slice(5),
+        value: Number.isFinite(value) ? Number(value.toFixed(3)) : null,
+      };
     });
-  }, [rows, playerAll, activeMetric]);
+  }, [rows, playerCharges, activeMetric]);
+
 
   return (
     <AppShell subtitle="投打數據與趨勢">
