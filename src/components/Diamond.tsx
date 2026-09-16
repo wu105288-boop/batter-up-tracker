@@ -7,11 +7,13 @@ export function Diamond({
   players,
   outs,
   onTapBase,
+  onTapHome,
 }: {
   bases: Bases;
   players: Player[];
   outs: number;
   onTapBase: (index: 0 | 1 | 2) => void;
+  onTapHome?: () => void;
 }) {
   const nameOf = (id: string | null) =>
     id ? (players.find((p) => p.id === id)?.name ?? "跑者") : null;
