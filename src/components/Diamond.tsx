@@ -30,7 +30,14 @@ export function Diamond({
         <div className="absolute top-1/2 left-1/2 size-[68%] -translate-x-1/2 -translate-y-1/2 rotate-45 rounded-[14px] bg-base/60 ring-1 ring-line" />
         <div className="absolute top-1/2 left-1/2 size-[34%] -translate-x-1/2 -translate-y-1/2 rotate-45 rounded-lg bg-panel ring-1 ring-line/60" />
         <div className="absolute top-1/2 left-1/2 size-8 -translate-x-1/2 -translate-y-1/2 rotate-45 rounded-[10px] bg-line/40 ring-1 ring-line" />
-        <div className="absolute bottom-[4%] left-1/2 size-6 -translate-x-1/2 rotate-45 rounded-[6px] bg-line/40 ring-1 ring-line" />
+        <button
+          onClick={() => onTapHome?.()}
+          aria-label="本壘"
+          className="absolute bottom-[4%] left-1/2 grid size-11 -translate-x-1/2 translate-y-2 place-items-center rounded-full"
+        >
+          <span className="absolute size-6 rotate-45 rounded-[6px] bg-line/40 ring-1 ring-line" />
+          <span className="absolute -bottom-3 text-[10px] text-mute">本壘</span>
+        </button>
 
         {spots.map((s) => {
           const runner = nameOf(bases[s.idx] ?? null);
