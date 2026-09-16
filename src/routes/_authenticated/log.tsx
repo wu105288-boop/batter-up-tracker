@@ -588,8 +588,48 @@ function LogPage() {
           bases={bases}
           players={players}
           outs={game?.outs ?? 0}
-          onTapBase={(i) => setEditBase(i)}
+          onTapBase={(i) => {
+            setEditHome(false);
+            setEditBase(i);
+          }}
+          onTapHome={() => {
+            setEditBase(null);
+            setEditHome((v) => !v);
+          }}
         />
+        {editHome && (
+          <div className="mt-3 rounded-xl bg-base/60 p-3 ring-1 ring-white/10">
+            <p className="mb-2 text-[12px] text-mute">本壘：手動調整得分</p>
+            <div className="flex flex-wrap gap-2">
+              {runnerBases.map((r, i) =>
+                r ? (
+                  <button
+                    key={i}
+                    onClick={() => void scoreRunner(i as 0 | 1 | 2)}
+                    className="rounded-lg bg-amber/15 px-3 py-2 text-[13px] text-amber ring-1 ring-amber/30"
+                  >
+                    {players.find((p) => p.id === r.playerId)?.name ?? "跑者"} 回壘得分
+                  </button>
+                ) : null,
+              )}
+              <button
+                onClick={() => void addManualRun()}
+                className="rounded-lg bg-panel px-3 py-2 text-[13px] ring-1 ring-white/10"
+              >
+                失分 +1
+              </button>
+              <button
+                onClick={() => void removeManualRun()}
+                className="rounded-lg bg-panel px-3 py-2 text-[13px] text-mute ring-1 ring-white/10"
+              >
+                失分 -1
+              </button>
+            </div>
+            <p className="mt-2 text-[11px] text-mute">
+              回壘得分會記在讓該跑者上壘的投手身上；+1／-1 記在目前投手。
+            </p>
+          </div>
+        )}
         {editBase !== null && (
           <div className="mt-3 rounded-xl bg-base/60 p-3 ring-1 ring-white/10">
             <p className="mb-2 text-[12px] text-mute">設定 {editBase + 1} 壘跑者</p>
