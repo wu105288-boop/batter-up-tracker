@@ -67,7 +67,7 @@ export function Diamond({
           </span>
         </span>
         <span className="size-1 rounded-full bg-line" />
-        <span>依結果自動推進 · 輕點壘包可手動調整</span>
+        <span>輕點壘包調整跑者 · 輕點本壘加減得分</span>
       </div>
     </div>
   );
