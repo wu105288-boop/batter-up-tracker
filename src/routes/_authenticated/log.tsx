@@ -362,7 +362,7 @@ function LogPage() {
     const pitcherKey = (["base1_pitcher", "base2_pitcher", "base3_pitcher"] as const)[idx];
     await supabase
       .from("games")
-      .update({ [baseKey]: null, [pitcherKey]: null })
+      .update({ [baseKey]: null, [pitcherKey]: null } as GamePatch)
       .eq("id", game.id);
     refreshAll();
     setEditHome(false);
