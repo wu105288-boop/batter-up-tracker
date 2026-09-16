@@ -55,6 +55,7 @@ function LogPage() {
   const [count, setCount] = useState<Count>(EMPTY);
   const [batterId, setBatterId] = useState<string | null>(null);
   const [editBase, setEditBase] = useState<0 | 1 | 2 | null>(null);
+  const [editHome, setEditHome] = useState(false);
 
   const { data: players = [] } = useQuery({
     queryKey: ["players"],
