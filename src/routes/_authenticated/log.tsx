@@ -343,6 +343,70 @@ function LogPage() {
     setEditBase(null);
   };
 
+  /** Manually send a runner home: clears his base and charges the run to his pitcher. */
+  const scoreRunner = async (idx: 0 | 1 | 2): Promise<void> => {
+    if (!game) return;
+    const runner = runnerBases[idx];
+    if (!runner) return;
+    const owner = runner.pitcherId ?? pitcherId;
+    if (owner) {
+      await supabase.from("run_charges").insert({
+        game_id: game.id,
+        pitcher_id: owner,
+        runs: 1,
+        inning: game.inning ?? 1,
+        kind: "run",
+      });
+    }
+    const baseKey = (["base1", "base2", "base3"] as const)[idx];
+    const pitcherKey = (["base1_pitcher", "base2_pitcher", "base3_pitcher"] as const)[idx];
+    await supabase
+      .from("games")
+      .update({ [baseKey]: null, [pitcherKey]: null })
+      .eq("id", game.id);
+    refreshAll();
+    setEditHome(false);
+    toast.success(`${players.find((p) => p.id === runner.playerId)?.name ?? "跑者"} 回壘得分`);
+  };
+
+  /** Add a run manually to the current pitcher without a runner on base. */
+  const addManualRun = async (): Promise<void> => {
+    if (!game || !pitcherId) {
+      toast.error("請先選擇投手");
+      return;
+    }
+    await supabase.from("run_charges").insert({
+      game_id: game.id,
+      pitcher_id: pitcherId,
+      runs: 1,
+      inning: game.inning ?? 1,
+      kind: "run",
+    });
+    refreshAll();
+    toast.success("已手動 +1 失分");
+  };
+
+  /** Remove the latest run charged to the current pitcher. */
+  const removeManualRun = async (): Promise<void> => {
+    if (!game || !pitcherId) return;
+    const { data } = await supabase
+      .from("run_charges")
+      .select("id")
+      .eq("game_id", game.id)
+      .eq("pitcher_id", pitcherId)
+      .order("created_at", { ascending: false })
+      .limit(1);
+    const row = data?.[0];
+    if (!row) {
+      toast.error("這位投手沒有可扣除的失分");
+      return;
+    }
+    await supabase.from("run_charges").delete().eq("id", row.id);
+    refreshAll();
+    toast.success("已扣除 1 分失分");
+  };
+
+
   const livePitcher = pitcherStats(
     gamePAs.filter((p) => p.pitcher_id === pitcherId),
     chargedRuns,
