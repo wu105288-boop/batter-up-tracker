@@ -55,6 +55,7 @@ function LogPage() {
   const [count, setCount] = useState<Count>(EMPTY);
   const [batterId, setBatterId] = useState<string | null>(null);
   const [editBase, setEditBase] = useState<0 | 1 | 2 | null>(null);
+  const [editHome, setEditHome] = useState(false);
 
   const { data: players = [] } = useQuery({
     queryKey: ["players"],
@@ -342,6 +343,70 @@ function LogPage() {
     setEditBase(null);
   };
 
+  /** Manually send a runner home: clears his base and charges the run to his pitcher. */
+  const scoreRunner = async (idx: 0 | 1 | 2): Promise<void> => {
+    if (!game) return;
+    const runner = runnerBases[idx];
+    if (!runner) return;
+    const owner = runner.pitcherId ?? pitcherId;
+    if (owner) {
+      await supabase.from("run_charges").insert({
+        game_id: game.id,
+        pitcher_id: owner,
+        runs: 1,
+        inning: game.inning ?? 1,
+        kind: "run",
+      });
+    }
+    const baseKey = (["base1", "base2", "base3"] as const)[idx];
+    const pitcherKey = (["base1_pitcher", "base2_pitcher", "base3_pitcher"] as const)[idx];
+    await supabase
+      .from("games")
+      .update({ [baseKey]: null, [pitcherKey]: null } as GamePatch)
+      .eq("id", game.id);
+    refreshAll();
+    setEditHome(false);
+    toast.success(`${players.find((p) => p.id === runner.playerId)?.name ?? "跑者"} 回壘得分`);
+  };
+
+  /** Add a run manually to the current pitcher without a runner on base. */
+  const addManualRun = async (): Promise<void> => {
+    if (!game || !pitcherId) {
+      toast.error("請先選擇投手");
+      return;
+    }
+    await supabase.from("run_charges").insert({
+      game_id: game.id,
+      pitcher_id: pitcherId,
+      runs: 1,
+      inning: game.inning ?? 1,
+      kind: "run",
+    });
+    refreshAll();
+    toast.success("已手動 +1 失分");
+  };
+
+  /** Remove the latest run charged to the current pitcher. */
+  const removeManualRun = async (): Promise<void> => {
+    if (!game || !pitcherId) return;
+    const { data } = await supabase
+      .from("run_charges")
+      .select("id")
+      .eq("game_id", game.id)
+      .eq("pitcher_id", pitcherId)
+      .order("created_at", { ascending: false })
+      .limit(1);
+    const row = data?.[0];
+    if (!row) {
+      toast.error("這位投手沒有可扣除的失分");
+      return;
+    }
+    await supabase.from("run_charges").delete().eq("id", row.id);
+    refreshAll();
+    toast.success("已扣除 1 分失分");
+  };
+
+
   const livePitcher = pitcherStats(
     gamePAs.filter((p) => p.pitcher_id === pitcherId),
     chargedRuns,
@@ -523,8 +588,48 @@ function LogPage() {
           bases={bases}
           players={players}
           outs={game?.outs ?? 0}
-          onTapBase={(i) => setEditBase(i)}
+          onTapBase={(i) => {
+            setEditHome(false);
+            setEditBase(i);
+          }}
+          onTapHome={() => {
+            setEditBase(null);
+            setEditHome((v) => !v);
+          }}
         />
+        {editHome && (
+          <div className="mt-3 rounded-xl bg-base/60 p-3 ring-1 ring-white/10">
+            <p className="mb-2 text-[12px] text-mute">本壘：手動調整得分</p>
+            <div className="flex flex-wrap gap-2">
+              {runnerBases.map((r, i) =>
+                r ? (
+                  <button
+                    key={i}
+                    onClick={() => void scoreRunner(i as 0 | 1 | 2)}
+                    className="rounded-lg bg-amber/15 px-3 py-2 text-[13px] text-amber ring-1 ring-amber/30"
+                  >
+                    {players.find((p) => p.id === r.playerId)?.name ?? "跑者"} 回壘得分
+                  </button>
+                ) : null,
+              )}
+              <button
+                onClick={() => void addManualRun()}
+                className="rounded-lg bg-panel px-3 py-2 text-[13px] ring-1 ring-white/10"
+              >
+                失分 +1
+              </button>
+              <button
+                onClick={() => void removeManualRun()}
+                className="rounded-lg bg-panel px-3 py-2 text-[13px] text-mute ring-1 ring-white/10"
+              >
+                失分 -1
+              </button>
+            </div>
+            <p className="mt-2 text-[11px] text-mute">
+              回壘得分會記在讓該跑者上壘的投手身上；+1／-1 記在目前投手。
+            </p>
+          </div>
+        )}
         {editBase !== null && (
           <div className="mt-3 rounded-xl bg-base/60 p-3 ring-1 ring-white/10">
             <p className="mb-2 text-[12px] text-mute">設定 {editBase + 1} 壘跑者</p>
