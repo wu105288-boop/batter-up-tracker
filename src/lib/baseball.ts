@@ -135,9 +135,20 @@ function advanceCore<T>(
       next[0] = batter;
       break;
     case "double_play":
-      next[0] = null;
-      next[1] = cur[0] ? null : (cur[1] ?? null);
-      next[2] = cur[0] ? (cur[1] ?? null) : (cur[2] ?? null);
+      // Batter is out, plus the lead forced runner. Everyone else holds.
+      if (cur[0]) {
+        // Runner on 1st is forced out at 2nd; 2nd/3rd stay put.
+        next[0] = null;
+        next[1] = cur[1] ?? null;
+        next[2] = cur[2] ?? null;
+      } else if (cur[1]) {
+        // No force at 2nd: runner on 2nd is the second out, 3rd stays.
+        next[1] = null;
+        next[2] = cur[2] ?? null;
+      } else {
+        // Only a runner on 3rd (or empty): he is the second out.
+        next[2] = null;
+      }
       break;
     default:
       next[0] = cur[0] ?? null;
