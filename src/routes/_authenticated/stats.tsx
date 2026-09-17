@@ -33,6 +33,8 @@ export const Route = createFileRoute("/_authenticated/stats")({
       },
       { property: "og:title", content: "資料統計 — 壘界筆記" },
       { property: "og:description", content: "投打數據與時間趨勢圖，可自訂統計區間。" },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: StatsPage,

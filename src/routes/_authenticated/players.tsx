@@ -13,6 +13,8 @@ export const Route = createFileRoute("/_authenticated/players")({
       { name: "description", content: "建立與管理球隊的投手與打者名單。" },
       { property: "og:title", content: "球員名單 — 壘界筆記" },
       { property: "og:description", content: "建立與管理球隊的投手與打者名單。" },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: PlayersPage,

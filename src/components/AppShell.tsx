@@ -7,6 +7,7 @@ const tabs = [
   { to: "/log", label: "打席記錄" },
   { to: "/players", label: "球員名單" },
   { to: "/stats", label: "資料統計" },
+  { to: "/releases", label: "版本紀錄" },
 ] as const;
 
 export function AppShell({
