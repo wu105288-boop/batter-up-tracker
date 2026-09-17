@@ -42,7 +42,7 @@ function ReleasesPage() {
             <CalendarDays className="size-3.5" aria-hidden="true" />
             <time dateTime={release.date}>{release.date.replaceAll("-", ".")}</time>
           </div>
-          <h2 className="font-display text-base font-semibold">{release.title}</h2>
+          <h2 className="font-display text-base font-semibold text-text">{release.title}</h2>
           <ul className="mt-3 space-y-3">
             {release.changes.map((change) => (
               <li key={change} className="flex items-start gap-2.5 text-[13px] leading-5 text-mute">
