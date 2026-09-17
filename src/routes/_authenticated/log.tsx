@@ -29,6 +29,8 @@ export const Route = createFileRoute("/_authenticated/log")({
       { name: "description", content: "逐球記錄好壞球與打席結果，壘包自動推進。" },
       { property: "og:title", content: "打席記錄 — 壘界筆記" },
       { property: "og:description", content: "逐球記錄好壞球與打席結果，壘包自動推進。" },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: LogPage,
@@ -489,12 +491,12 @@ function LogPage() {
 
         <div className="mt-4 flex items-center justify-between gap-3">
           <div className="flex-1">
-            <p className="mb-1.5 text-[11px] font-medium tracking-wide text-strike">壞球 BALLS</p>
+            <p className="mb-1.5 text-[11px] font-medium tracking-wide text-ball">壞球 BALLS</p>
             <div className="flex gap-1.5">
               {[0, 1, 2].map((i) => (
                 <span
                   key={i}
-                  className={`h-3 w-5 rounded-full ${i < count.balls ? "bg-strike shadow-[0_0_10px] shadow-strike/60" : "bg-line"}`}
+                  className={`h-3 w-5 rounded-full ${i < count.balls ? "bg-ball shadow-[0_0_10px] shadow-ball/60" : "bg-line"}`}
                 />
               ))}
             </div>
@@ -503,36 +505,36 @@ function LogPage() {
             {count.balls} — {count.strikes}
           </div>
           <div className="flex-1">
-            <p className="mb-1.5 text-right text-[11px] font-medium tracking-wide text-ball">
+            <p className="mb-1.5 text-right text-[11px] font-medium tracking-wide text-strike">
               好球 STRIKES
             </p>
             <div className="flex justify-end gap-1.5">
               {[0, 1].map((i) => (
                 <span
                   key={i}
-                  className={`h-3 w-5 rounded-full ${i < count.strikes ? "bg-ball shadow-[0_0_10px] shadow-ball/60" : "bg-line"}`}
+                  className={`h-3 w-5 rounded-full ${i < count.strikes ? "bg-strike shadow-[0_0_10px] shadow-strike/60" : "bg-line"}`}
                 />
               ))}
             </div>
           </div>
         </div>
 
-        <div className="mt-4 grid grid-cols-3 gap-2">
+        <div className="mt-5 grid grid-cols-2 gap-2.5">
           <button
             onClick={onStrike}
-            className="rounded-xl bg-ball/20 py-3.5 text-sm font-medium text-ball ring-1 ring-ball/40"
+            className="min-h-16 rounded-xl bg-strike/20 py-4 text-base font-semibold text-strike ring-1 ring-strike/50"
           >
             好球
           </button>
           <button
             onClick={onBall}
-            className="rounded-xl bg-strike/20 py-3.5 text-sm font-medium text-strike ring-1 ring-strike/40"
+            className="min-h-16 rounded-xl bg-ball/20 py-4 text-base font-semibold text-ball ring-1 ring-ball/50"
           >
             壞球
           </button>
           <button
             onClick={onFoul}
-            className="rounded-xl bg-panel py-3.5 text-sm font-medium ring-1 ring-white/15"
+            className="col-span-2 rounded-xl bg-panel py-3 text-sm font-medium ring-1 ring-white/15"
           >
             界外
           </button>

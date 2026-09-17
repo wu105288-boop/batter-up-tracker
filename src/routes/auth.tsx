@@ -5,13 +5,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
 
 export const Route = createFileRoute("/auth")({
-  ssr: false,
   head: () => ({
     meta: [
       { title: "登入 — 壘界筆記棒球數據" },
       { name: "description", content: "登入壘界筆記，開始記錄你們球隊的打席與投打數據。" },
       { property: "og:title", content: "登入 — 壘界筆記棒球數據" },
       { property: "og:description", content: "登入後即可記錄打席、壘包推進與投打數據。" },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: AuthPage,
