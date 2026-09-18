@@ -603,13 +603,52 @@ function LogPage() {
           outs={game?.outs ?? 0}
           onTapBase={(i) => {
             setEditHome(false);
+            setEditResp(null);
             setEditBase(i);
           }}
           onTapHome={() => {
             setEditBase(null);
+            setEditResp(null);
             setEditHome((v) => !v);
           }}
+          onLongPressBase={(i) => {
+            if (!runnerBases[i]) {
+              toast.error("這個壘包沒有跑者");
+              return;
+            }
+            setEditBase(null);
+            setEditHome(false);
+            setEditResp(i);
+          }}
         />
+        {editResp !== null && runnerBases[editResp] && (
+          <div className="mt-3 rounded-xl bg-base/60 p-3 ring-1 ring-white/10">
+            <p className="mb-2 text-[12px] text-mute">
+              {editResp + 1} 壘 ·{" "}
+              {players.find((p) => p.id === runnerBases[editResp]!.playerId)?.name ?? "跑者"}{" "}
+              的責任投手（目前：
+              {players.find((p) => p.id === runnerBases[editResp]!.pitcherId)?.name ?? "未指定"}）
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {pitchers.map((p) => (
+                <button
+                  key={p.id}
+                  onClick={() => setResponsible(editResp, p.id)}
+                  className={`rounded-lg px-3 py-2 text-[13px] ring-1 ${
+                    runnerBases[editResp]!.pitcherId === p.id
+                      ? "bg-sky/20 text-sky ring-sky/40"
+                      : "bg-panel ring-white/10"
+                  }`}
+                >
+                  {p.name}
+                </button>
+              ))}
+            </div>
+            <p className="mt-2 text-[11px] text-mute">
+              這位跑者之後得分，失分會算在這裡選的投手身上。
+            </p>
+          </div>
+        )}
         {editHome && (
           <div className="mt-3 rounded-xl bg-base/60 p-3 ring-1 ring-white/10">
             <p className="mb-2 text-[12px] text-mute">本壘：手動調整得分</p>
