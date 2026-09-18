@@ -6,7 +6,7 @@ export function exportStatCard(opts: {
   subtitle: string;
   badge: string;
   rows: CardRow[];
-  note?: string;
+  note?: string | undefined;
   fileName: string;
 }) {
   const scale = 2;
