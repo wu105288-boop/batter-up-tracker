@@ -7,6 +7,15 @@ export type ReleaseNote = {
 
 export const RELEASES: ReleaseNote[] = [
   {
+    version: "1.4",
+    date: "2026-09-17",
+    title: "責任投手可調整、數據圖匯出",
+    changes: [
+      "長按壘包上的跑者，可以改指定他的責任投手（換投後手動加跑者也能算給上一位投手）。",
+      "資料統計頁新增「匯出數據圖」，可存下含球員姓名與完整數據表格的圖片分享。",
+    ],
+  },
+  {
     version: "1.3",
     date: "2026-09-17",
     title: "比賽記錄操作與計分規則更新",

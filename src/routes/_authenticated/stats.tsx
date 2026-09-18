@@ -10,7 +10,9 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { exportStatCard } from "@/lib/statCard";
 import { AppShell, Panel, Stat } from "@/components/AppShell";
 import {
   batterStats,
@@ -130,6 +132,63 @@ function StatsPage() {
 
   const pStats = pitcherStats(rows, chargedRuns);
   const bStats = batterStats(rows);
+
+  const activeName = players.find((p) => p.id === activeId)?.name ?? "球員";
+  const rangeLabel =
+    range === "all"
+      ? "全部區間"
+      : range === "custom"
+        ? `${from} ~ ${to}`
+        : `近 ${range} 天`;
+
+  const exportImage = () => {
+    if (rows.length === 0) {
+      toast.error("這個區間沒有資料可以匯出");
+      return;
+    }
+    const cardRows =
+      mode === "pitcher"
+        ? [
+            { label: "防禦率 ERA", value: pStats.eraDisplay },
+            { label: "被打擊率 BAA", value: fmt3(pStats.baa) },
+            { label: "投球局數 IP", value: pStats.ipDisplay },
+            { label: "責任失分 R", value: fmt2(pStats.runs) },
+            { label: "K/9", value: fmtRate(pStats.k9) },
+            { label: "BB/9", value: fmtRate(pStats.bb9) },
+            { label: "面對打席 BF", value: String(pStats.bf) },
+            { label: "總投球數 NP", value: String(pStats.np) },
+            { label: "好球比例", value: `${Math.round(pStats.strikePct * 100)}%` },
+            { label: "三振保送比 K/BB", value: fmt2(pStats.kbb) },
+            { label: "被安打 H", value: String(pStats.h) },
+            { label: "WHIP", value: fmt2(pStats.whip) },
+          ]
+        : [
+            { label: "打擊率 AVG", value: fmt3(bStats.avg) },
+            { label: "上壘率 OBP", value: fmt3(bStats.obp) },
+            { label: "OPS", value: fmt3(bStats.ops) },
+            { label: "長打率 SLG", value: fmt3(bStats.slg) },
+            { label: "打席 PA", value: String(bStats.pa) },
+            { label: "打數 AB", value: String(bStats.ab) },
+            { label: "安打 H", value: String(bStats.h) },
+            { label: "全壘打 HR", value: String(bStats.hr) },
+            { label: "打點 RBI", value: String(bStats.rbi) },
+            { label: "保送 BB", value: String(bStats.bb) },
+            { label: "三振 K", value: String(bStats.so) },
+            { label: "壘打數 TB", value: String(bStats.tb) },
+          ];
+    exportStatCard({
+      title: activeName,
+      subtitle: `${rangeLabel} · 共 ${rows.length} 個打席`,
+      badge: mode === "pitcher" ? "投手數據" : "打者數據",
+      rows: cardRows,
+      note:
+        mode === "pitcher"
+          ? `局數以出局數計算（1 出局 = 0.1 局）；責任失分歸屬讓跑者上壘的投手，提前換局時每位殘壘跑者折算 ${STRANDED_RUN_VALUE} 分。`
+          : undefined,
+      fileName: `${activeName}-${mode === "pitcher" ? "投手" : "打者"}數據.png`,
+    });
+    toast.success("已匯出數據圖");
+  };
 
   const metrics =
     mode === "pitcher"
@@ -269,7 +328,17 @@ function StatsPage() {
       </Panel>
 
       {mode === "pitcher" ? (
-        <Panel title="投手資料">
+        <Panel
+          title="投手資料"
+          action={
+            <button
+              onClick={exportImage}
+              className="rounded-md bg-sky/15 px-2.5 py-1 text-[11px] font-medium text-sky ring-1 ring-sky/40"
+            >
+              匯出數據圖
+            </button>
+          }
+        >
           <div className="grid grid-cols-3 gap-2">
             <Stat label="防禦率 ERA" value={pStats.eraDisplay} tone="sky" />
             <Stat label="被打擊率 BAA" value={fmt3(pStats.baa)} />
@@ -291,7 +360,17 @@ function StatsPage() {
         </Panel>
       ) : (
 
-        <Panel title="打者資料">
+        <Panel
+          title="打者資料"
+          action={
+            <button
+              onClick={exportImage}
+              className="rounded-md bg-amber/15 px-2.5 py-1 text-[11px] font-medium text-amber ring-1 ring-amber/40"
+            >
+              匯出數據圖
+            </button>
+          }
+        >
           <div className="grid grid-cols-3 gap-2">
             <Stat label="打擊率 AVG" value={fmt3(bStats.avg)} tone="amber" />
             <Stat label="上壘率 OBP" value={fmt3(bStats.obp)} />
