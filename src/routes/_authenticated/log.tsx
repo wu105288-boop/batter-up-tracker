@@ -58,6 +58,7 @@ function LogPage() {
   const [batterId, setBatterId] = useState<string | null>(null);
   const [editBase, setEditBase] = useState<0 | 1 | 2 | null>(null);
   const [editHome, setEditHome] = useState(false);
+  const [editResp, setEditResp] = useState<0 | 1 | 2 | null>(null);
 
   const { data: players = [] } = useQuery({
     queryKey: ["players"],
@@ -343,6 +344,16 @@ function LogPage() {
       [pitcherKey]: playerId ? pitcherId : null,
     } as GamePatch);
     setEditBase(null);
+  };
+
+  /** Long press a base: reassign which pitcher is responsible for that runner. */
+  const setResponsible = (idx: 0 | 1 | 2, newPitcherId: string) => {
+    const pitcherKey = (["base1_pitcher", "base2_pitcher", "base3_pitcher"] as const)[idx];
+    patchGame.mutate({ [pitcherKey]: newPitcherId } as GamePatch);
+    setEditResp(null);
+    toast.success(
+      `${idx + 1} 壘跑者的責任投手改為 ${players.find((p) => p.id === newPitcherId)?.name ?? ""}`,
+    );
   };
 
   /** Manually send a runner home: clears his base and charges the run to his pitcher. */
