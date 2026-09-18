@@ -1,3 +1,4 @@
+import { useRef } from "react";
 import type { Bases } from "@/lib/baseball";
 
 type Player = { id: string; name: string };
@@ -17,19 +18,19 @@ export function Diamond({
   onTapHome?: () => void;
   onLongPressBase?: (index: 0 | 1 | 2) => void;
 }) {
-  let timer: ReturnType<typeof setTimeout> | null = null;
-  let longFired = false;
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const longFired = useRef(false);
   const startPress = (idx: 0 | 1 | 2) => {
     if (!onLongPressBase) return;
-    longFired = false;
-    timer = setTimeout(() => {
-      longFired = true;
+    longFired.current = false;
+    timer.current = setTimeout(() => {
+      longFired.current = true;
       onLongPressBase(idx);
-    }, 500);
+    }, 450);
   };
   const endPress = () => {
-    if (timer) clearTimeout(timer);
-    timer = null;
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = null;
   };
   const nameOf = (id: string | null) =>
     id ? (players.find((p) => p.id === id)?.name ?? "跑者") : null;
@@ -60,8 +61,19 @@ export function Diamond({
           return (
             <button
               key={s.idx}
-              onClick={() => onTapBase(s.idx)}
-              className={`absolute ${s.pos} grid size-11 place-items-center rounded-full`}
+              onClick={() => {
+                if (longFired.current) {
+                  longFired.current = false;
+                  return;
+                }
+                onTapBase(s.idx);
+              }}
+              onPointerDown={() => startPress(s.idx)}
+              onPointerUp={endPress}
+              onPointerLeave={endPress}
+              onPointerCancel={endPress}
+              onContextMenu={(e) => e.preventDefault()}
+              className={`absolute ${s.pos} grid size-11 touch-none place-items-center rounded-full select-none`}
               aria-label={`${s.label}壘`}
             >
               <span className="absolute size-6 rotate-45 rounded-[6px] bg-line/40 ring-1 ring-line" />
@@ -83,7 +95,7 @@ export function Diamond({
           </span>
         </span>
         <span className="size-1 rounded-full bg-line" />
-        <span>輕點壘包調整跑者 · 輕點本壘加減得分</span>
+        <span>輕點壘包調整跑者 · 長按改責任投手 · 點本壘加減得分</span>
       </div>
     </div>
   );
