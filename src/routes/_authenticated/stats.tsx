@@ -328,7 +328,17 @@ function StatsPage() {
       </Panel>
 
       {mode === "pitcher" ? (
-        <Panel title="投手資料">
+        <Panel
+          title="投手資料"
+          action={
+            <button
+              onClick={exportImage}
+              className="rounded-md bg-sky/15 px-2.5 py-1 text-[11px] font-medium text-sky ring-1 ring-sky/40"
+            >
+              匯出數據圖
+            </button>
+          }
+        >
           <div className="grid grid-cols-3 gap-2">
             <Stat label="防禦率 ERA" value={pStats.eraDisplay} tone="sky" />
             <Stat label="被打擊率 BAA" value={fmt3(pStats.baa)} />
