@@ -360,7 +360,17 @@ function StatsPage() {
         </Panel>
       ) : (
 
-        <Panel title="打者資料">
+        <Panel
+          title="打者資料"
+          action={
+            <button
+              onClick={exportImage}
+              className="rounded-md bg-amber/15 px-2.5 py-1 text-[11px] font-medium text-amber ring-1 ring-amber/40"
+            >
+              匯出數據圖
+            </button>
+          }
+        >
           <div className="grid grid-cols-3 gap-2">
             <Stat label="打擊率 AVG" value={fmt3(bStats.avg)} tone="amber" />
             <Stat label="上壘率 OBP" value={fmt3(bStats.obp)} />
