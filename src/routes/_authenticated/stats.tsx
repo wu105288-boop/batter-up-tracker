@@ -1,6 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
+import { Sparkles } from "lucide-react";
 import {
   CartesianGrid,
   Line,
@@ -13,6 +15,7 @@ import {
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { exportStatCard } from "@/lib/statCard";
+import { analyzePlayer } from "@/lib/analysis.functions";
 import { AppShell, Panel, Stat } from "@/components/AppShell";
 import {
   batterStats,
@@ -141,12 +144,7 @@ function StatsPage() {
         ? `${from} ~ ${to}`
         : `近 ${range} 天`;
 
-  const exportImage = () => {
-    if (rows.length === 0) {
-      toast.error("這個區間沒有資料可以匯出");
-      return;
-    }
-    const cardRows =
+  const cardRows =
       mode === "pitcher"
         ? [
             { label: "防禦率 ERA", value: pStats.eraDisplay },
@@ -176,6 +174,41 @@ function StatsPage() {
             { label: "三振 K", value: String(bStats.so) },
             { label: "壘打數 TB", value: String(bStats.tb) },
           ];
+
+  const runAnalysis = useServerFn(analyzePlayer);
+  const [aiText, setAiText] = useState<string | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+
+  const analyze = async () => {
+    if (rows.length === 0) {
+      toast.error("這個區間沒有資料可以分析");
+      return;
+    }
+    setAiLoading(true);
+    setAiText(null);
+    try {
+      const res = await runAnalysis({
+        data: {
+          playerName: activeName,
+          mode,
+          rangeLabel,
+          paCount: rows.length,
+          stats: cardRows,
+        },
+      });
+      setAiText(res.text || "這次沒有取得分析內容，請再試一次。");
+    } catch {
+      toast.error("AI 分析失敗，請稍後再試");
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const exportImage = () => {
+    if (rows.length === 0) {
+      toast.error("這個區間沒有資料可以匯出");
+      return;
+    }
     exportStatCard({
       title: activeName,
       subtitle: `${rangeLabel} · 共 ${rows.length} 個打席`,
@@ -430,6 +463,34 @@ function StatsPage() {
           </div>
         )}
         <p className="mt-2 text-[11px] text-mute">曲線為區間內累積數據，隨每天的打席逐步變化。</p>
+      </Panel>
+
+      <Panel
+        title="AI 能力分析與評語"
+        action={
+          <button
+            onClick={analyze}
+            disabled={aiLoading}
+            className="flex items-center gap-1 rounded-md bg-sky/15 px-2.5 py-1 text-[11px] font-medium text-sky ring-1 ring-sky/40 disabled:opacity-50"
+          >
+            <Sparkles className="size-3" />
+            {aiLoading ? "分析中…" : aiText ? "重新分析" : "開始分析"}
+          </button>
+        }
+      >
+        {aiLoading ? (
+          <p className="py-6 text-center text-[13px] text-mute">
+            正在分析 {activeName} 的{mode === "pitcher" ? "投球" : "打擊"}表現…
+          </p>
+        ) : aiText ? (
+          <div className="space-y-1.5 text-[13px] leading-relaxed whitespace-pre-wrap text-text">
+            {aiText}
+          </div>
+        ) : (
+          <p className="py-6 text-center text-[13px] text-mute">
+            點右上角「開始分析」，AI 會依目前區間的數據給出能力評估與練習建議。
+          </p>
+        )}
       </Panel>
     </AppShell>
   );

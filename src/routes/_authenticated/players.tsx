@@ -5,6 +5,16 @@ import { Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { AppShell, Panel } from "@/components/AppShell";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export const Route = createFileRoute("/_authenticated/players")({
   head: () => ({
@@ -26,6 +36,7 @@ function PlayersPage() {
   const [number, setNumber] = useState("");
   const [isPitcher, setIsPitcher] = useState(true);
   const [isBatter, setIsBatter] = useState(true);
+  const [pendingDelete, setPendingDelete] = useState<{ id: string; name: string } | null>(null);
 
   const { data: players = [] } = useQuery({
     queryKey: ["players"],
@@ -63,7 +74,11 @@ function PlayersPage() {
       const { error } = await supabase.from("players").delete().eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["players"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["players"] });
+      toast.success("已刪除球員");
+    },
+    onError: () => toast.error("刪除失敗"),
   });
 
   return (
@@ -128,7 +143,7 @@ function PlayersPage() {
                   )}
                 </span>
                 <button
-                  onClick={() => remove.mutate(p.id)}
+                  onClick={() => setPendingDelete({ id: p.id, name: p.name })}
                   aria-label={`刪除 ${p.name}`}
                   className="text-mute"
                 >
@@ -139,6 +154,36 @@ function PlayersPage() {
           </ul>
         )}
       </Panel>
+
+      <AlertDialog
+        open={pendingDelete !== null}
+        onOpenChange={(open) => !open && setPendingDelete(null)}
+      >
+        <AlertDialogContent className="max-w-[340px] rounded-2xl border-line bg-panel text-text">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-[15px]">
+              確定要刪除「{pendingDelete?.name}」嗎？
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-[13px] text-mute">
+              刪除後這位球員會從名單移除，無法復原。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-row justify-end gap-2">
+            <AlertDialogCancel className="mt-0 rounded-xl bg-base/60 text-[13px] text-mute ring-1 ring-white/10">
+              取消
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (pendingDelete) remove.mutate(pendingDelete.id);
+                setPendingDelete(null);
+              }}
+              className="rounded-xl bg-strike/20 text-[13px] font-semibold text-strike ring-1 ring-strike/50 hover:bg-strike/30"
+            >
+              確定刪除
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AppShell>
   );
 }
