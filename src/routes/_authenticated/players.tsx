@@ -36,6 +36,7 @@ function PlayersPage() {
   const [number, setNumber] = useState("");
   const [isPitcher, setIsPitcher] = useState(true);
   const [isBatter, setIsBatter] = useState(true);
+  const [pendingDelete, setPendingDelete] = useState<{ id: string; name: string } | null>(null);
 
   const { data: players = [] } = useQuery({
     queryKey: ["players"],
@@ -73,7 +74,11 @@ function PlayersPage() {
       const { error } = await supabase.from("players").delete().eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["players"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["players"] });
+      toast.success("已刪除球員");
+    },
+    onError: () => toast.error("刪除失敗"),
   });
 
   return (
