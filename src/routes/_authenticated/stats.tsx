@@ -1,6 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
+import { Sparkles } from "lucide-react";
 import {
   CartesianGrid,
   Line,
@@ -13,6 +15,7 @@ import {
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { exportStatCard } from "@/lib/statCard";
+import { analyzePlayer } from "@/lib/analysis.functions";
 import { AppShell, Panel, Stat } from "@/components/AppShell";
 import {
   batterStats,
