@@ -143,7 +143,7 @@ function PlayersPage() {
                   )}
                 </span>
                 <button
-                  onClick={() => remove.mutate(p.id)}
+                  onClick={() => setPendingDelete({ id: p.id, name: p.name })}
                   aria-label={`刪除 ${p.name}`}
                   className="text-mute"
                 >
@@ -154,6 +154,36 @@ function PlayersPage() {
           </ul>
         )}
       </Panel>
+
+      <AlertDialog
+        open={pendingDelete !== null}
+        onOpenChange={(open) => !open && setPendingDelete(null)}
+      >
+        <AlertDialogContent className="max-w-[340px] rounded-2xl border-line bg-panel text-text">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-[15px]">
+              確定要刪除「{pendingDelete?.name}」嗎？
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-[13px] text-mute">
+              刪除後這位球員會從名單移除，無法復原。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-row justify-end gap-2">
+            <AlertDialogCancel className="mt-0 rounded-xl bg-base/60 text-[13px] text-mute ring-1 ring-white/10">
+              取消
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (pendingDelete) remove.mutate(pendingDelete.id);
+                setPendingDelete(null);
+              }}
+              className="rounded-xl bg-strike/20 text-[13px] font-semibold text-strike ring-1 ring-strike/50 hover:bg-strike/30"
+            >
+              確定刪除
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AppShell>
   );
 }
