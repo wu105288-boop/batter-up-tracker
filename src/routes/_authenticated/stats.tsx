@@ -144,12 +144,7 @@ function StatsPage() {
         ? `${from} ~ ${to}`
         : `近 ${range} 天`;
 
-  const exportImage = () => {
-    if (rows.length === 0) {
-      toast.error("這個區間沒有資料可以匯出");
-      return;
-    }
-    const cardRows =
+  const cardRows =
       mode === "pitcher"
         ? [
             { label: "防禦率 ERA", value: pStats.eraDisplay },
@@ -179,6 +174,41 @@ function StatsPage() {
             { label: "三振 K", value: String(bStats.so) },
             { label: "壘打數 TB", value: String(bStats.tb) },
           ];
+
+  const runAnalysis = useServerFn(analyzePlayer);
+  const [aiText, setAiText] = useState<string | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+
+  const analyze = async () => {
+    if (rows.length === 0) {
+      toast.error("這個區間沒有資料可以分析");
+      return;
+    }
+    setAiLoading(true);
+    setAiText(null);
+    try {
+      const res = await runAnalysis({
+        data: {
+          playerName: activeName,
+          mode,
+          rangeLabel,
+          paCount: rows.length,
+          stats: cardRows,
+        },
+      });
+      setAiText(res.text || "這次沒有取得分析內容，請再試一次。");
+    } catch {
+      toast.error("AI 分析失敗，請稍後再試");
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const exportImage = () => {
+    if (rows.length === 0) {
+      toast.error("這個區間沒有資料可以匯出");
+      return;
+    }
     exportStatCard({
       title: activeName,
       subtitle: `${rangeLabel} · 共 ${rows.length} 個打席`,
