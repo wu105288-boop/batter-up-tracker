@@ -7,6 +7,15 @@ export type ReleaseNote = {
 
 export const RELEASES: ReleaseNote[] = [
   {
+    version: "1.5",
+    date: "2026-09-19",
+    title: "AI 球員分析、刪除確認",
+    changes: [
+      "資料統計頁最下方新增「AI 能力分析與評語」，依目前區間的數據給出能力評估、優缺點與練習建議。",
+      "刪除球員時會先跳出確認視窗，避免誤按。",
+    ],
+  },
+  {
     version: "1.4",
     date: "2026-09-17",
     title: "責任投手可調整、數據圖匯出",
