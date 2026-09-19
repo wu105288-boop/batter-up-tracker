@@ -464,6 +464,34 @@ function StatsPage() {
         )}
         <p className="mt-2 text-[11px] text-mute">曲線為區間內累積數據，隨每天的打席逐步變化。</p>
       </Panel>
+
+      <Panel
+        title="AI 能力分析與評語"
+        action={
+          <button
+            onClick={analyze}
+            disabled={aiLoading}
+            className="flex items-center gap-1 rounded-md bg-sky/15 px-2.5 py-1 text-[11px] font-medium text-sky ring-1 ring-sky/40 disabled:opacity-50"
+          >
+            <Sparkles className="size-3" />
+            {aiLoading ? "分析中…" : aiText ? "重新分析" : "開始分析"}
+          </button>
+        }
+      >
+        {aiLoading ? (
+          <p className="py-6 text-center text-[13px] text-mute">
+            正在分析 {activeName} 的{mode === "pitcher" ? "投球" : "打擊"}表現…
+          </p>
+        ) : aiText ? (
+          <div className="space-y-1.5 text-[13px] leading-relaxed whitespace-pre-wrap text-text">
+            {aiText}
+          </div>
+        ) : (
+          <p className="py-6 text-center text-[13px] text-mute">
+            點右上角「開始分析」，AI 會依目前區間的數據給出能力評估與練習建議。
+          </p>
+        )}
+      </Panel>
     </AppShell>
   );
 }
